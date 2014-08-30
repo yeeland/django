@@ -107,10 +107,13 @@ class Command(BaseCommand):
                     found_files[prefixed_path] = (storage, path)
                     handler(path, prefixed_path, storage)
 
+        modified_files = self.copied_files + self.symlinked_files
+
         # Here we check if the storage backend has a post_process
         # method and pass it the list of modified files.
         if self.post_process and hasattr(self.storage, 'post_process'):
-            processor = self.storage.post_process(found_files,
+            files_for_post_process = [(prefixed_path, found_files[prefixed_path]) for prefixed_path in modified_files]
+            processor = self.storage.post_process(OrderedDict(files_for_post_process),
                                                   dry_run=self.dry_run)
             for original_path, processed_path, processed in processor:
                 if isinstance(processed, Exception):
@@ -127,7 +130,7 @@ class Command(BaseCommand):
                     self.log("Skipped post-processing '%s'" % original_path)
 
         return {
-            'modified': self.copied_files + self.symlinked_files,
+            'modified': modified_files,
             'unmodified': self.unmodified_files,
             'post_processed': self.post_processed_files,
         }
